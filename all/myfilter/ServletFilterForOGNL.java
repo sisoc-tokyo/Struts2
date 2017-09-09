@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ServletFilterForOGNL implements javax.servlet.Filter {
-	private static final String SIGNATURE_OGNL = "OgnlContext|OgnlUtil|#context|@DEFAULT_MEMBER_ACCESS|#_memberAccess";
+	private static final String SIGNATURE_OGNL = 
+			"OgnlContext|OgnlUtil|#context|@DEFAULT_MEMBER_ACCESS|#_memberAccess|java.lang.ProcessBuilder|java.lang.Runtime";
 	private static final String ERROR_INVALID_REQUEST = "Invalid request detected!";
 	private FilterConfig filterConfig;
 
