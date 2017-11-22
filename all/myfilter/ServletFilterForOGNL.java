@@ -2,25 +2,20 @@ package myfilter;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.Enumeration;
+import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ServletFilterForOGNL implements javax.servlet.Filter {
 	private static final String SIGNATURE_OGNL = 
 			"OgnlContext|OgnlUtil|#context|@DEFAULT_MEMBER_ACCESS|#_memberAccess|java.lang.ProcessBuilder|java.lang.Runtime";
-	private static final String ERROR_INVALID_REQUEST = "Invalid request detected!";
+	private static final String ERROR_INVALID_REQUEST = "BlockedByServletFilterForOGNL.Please press back button.";
+	private static final String filterName="ServletFilterForOGNL";
 	private FilterConfig filterConfig;
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws java.io.IOException, javax.servlet.ServletException {
-
-		System.out.println("Servlet Filter: " + this.getClass().getName() + "Called.");
+		
 		HttpServletRequest httpRequest = (HttpServletRequest) request;
 		// URL
 		String uri = httpRequest.getRequestURI();
@@ -28,44 +23,49 @@ public class ServletFilterForOGNL implements javax.servlet.Filter {
 		// Query
 		String query = httpRequest.getQueryString();
 
-		BufferedReader reader = null;
-		String body = "";
-
-		try {
-			reader = httpRequest.getReader();
-			Stream<String> lines = reader.lines();
-			body = lines.collect(Collectors.joining("\r\n"));
-		} catch (IOException e) {
-			// skip filter
-			e.printStackTrace();
-			chain.doFilter(request, response);
-		} finally {
-			reader.close();
-		}
-
+		// body
+		StringBuilder body = new StringBuilder("");
+		httpRequest.setCharacterEncoding("UTF-8");
+		   Enumeration names = httpRequest.getParameterNames();
+		    while (names.hasMoreElements()){
+		      String name = (String)names.nextElement();
+		      String vals[] = request.getParameterValues(name);
+		      if (vals != null){
+		        for (int i = 0 ; i < vals.length ; i++){
+		          body.append(vals[i]);
+		        }
+		      }
+		    }
+		
 		Pattern p = Pattern.compile(SIGNATURE_OGNL);
 
-		Enumeration headernames = httpRequest.getHeaderNames();
+		try{
+		// header
+		Enumeration<String> headernames = httpRequest.getHeaderNames();
 		while (headernames.hasMoreElements()) {
 			String name = (String) headernames.nextElement();
-			Enumeration headervals = httpRequest.getHeaders(name);
+			Enumeration<String> headervals = httpRequest.getHeaders(name);
 			while (headervals.hasMoreElements()) {
 				String value = (String) headervals.nextElement();
 				if (p.matcher(value).find()) {
-					System.out.println("Malicious request header:" + name + ": " + value);
+					System.out.println(filterName+":Malicious header:" + name + ": " + value);
 					throw new ServletException(ERROR_INVALID_REQUEST);
 				}
 			}
 		}
 		if (p.matcher(uri).find()) {
-			System.out.println("Malicious URI:" + uri);
+			System.out.println(filterName+":Malicious URI:" + uri);
 			throw new ServletException(ERROR_INVALID_REQUEST);
 		} else if (null != query && p.matcher(query).find()) {
-			System.out.println("Malicious query string:" + query);
+			System.out.println(filterName+":Malicious query:" + query);
 			throw new ServletException(ERROR_INVALID_REQUEST);
-		} else if (p.matcher(body).find()) {
-			System.out.println("Malicious Request body:" + body);
+		} 
+		else if (p.matcher(body).find()) {
+			System.out.println(filterName+":Malicious body:" + body);
 			throw new ServletException(ERROR_INVALID_REQUEST);
+		}
+		} catch (ServletException se){
+			throw(se);
 		}
 		chain.doFilter(request, response);
 	}
